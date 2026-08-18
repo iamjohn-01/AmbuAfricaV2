@@ -1,5 +1,5 @@
 /* =====================================================
-   AMBUAFRICA V2 — DEMO APPLICATION
+   AMBUAFRICA V3 — UI COMPATIBILITY LAYER
    Frontend-only demo. Data is stored in localStorage.
    No real money, passwords, GPS, or medical dispatch is used.
 ===================================================== */
