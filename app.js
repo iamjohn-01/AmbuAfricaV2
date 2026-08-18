@@ -1,2124 +1,240 @@
 /* =====================================================
-   AMBUAFRICA V2
-   FRONTEND PROTOTYPE
+   AMBUAFRICA V2 — DEMO APPLICATION
+   Frontend-only demo. Data is stored in localStorage.
+   No real money, passwords, GPS, or medical dispatch is used.
 ===================================================== */
 
+const DEMO_PASSWORD = "password123";
+const STORAGE_KEY = "ambuAfricaDemoStateV2";
 
-/* =====================================================
-   DEMO USERS
-===================================================== */
-
-const demoUsers = {
-
-    patient: {
-
-        email: "patient@demo.com",
-
-        password: "password123",
-
-        name: "John Doe",
-
-        role: "patient"
-
-    },
-
-    hospital: {
-
-        email: "hospital@demo.com",
-
-        password: "password123",
-
-        name: "MedCare Hospital",
-
-        role: "hospital"
-
-    },
-
-    admin: {
-
-        email: "admin@demo.com",
-
-        password: "password123",
-
-        name: "System Administrator",
-
-        role: "admin"
-
-    }
-
+const seed = {
+  users: [
+    { id:"USR-001", name:"John Doe", email:"patient@demo.com", phone:"+234 801 234 5678", password:DEMO_PASSWORD, role:"patient", status:"Active", joined:"18 Aug 2026" },
+    { id:"HSP-001", name:"MedCare Hospital", email:"hospital@demo.com", phone:"+234 803 111 2200", password:DEMO_PASSWORD, role:"hospital", status:"Active", joined:"01 Aug 2026", address:"12 Allen Avenue, Ikeja, Lagos", verified:true },
+    { id:"ADM-001", name:"System Administrator", email:"admin@demo.com", phone:"+234 800 000 0000", password:DEMO_PASSWORD, role:"admin", status:"Active", joined:"01 Jan 2026" },
+    { id:"USR-002", name:"Sarah James", email:"sarah@example.com", phone:"+234 809 222 3344", password:"", role:"patient", status:"Active", joined:"17 Aug 2026" },
+    { id:"HSP-002", name:"Lagos General Hospital", email:"lgh@example.com", phone:"+234 809 444 5566", password:"", role:"hospital", status:"Active", joined:"12 Jul 2026", address:"Marina, Lagos", verified:true }
+  ],
+  ambulances: [
+    { id:"A-101", hospital:"MedCare Hospital", type:"Advanced Life Support", driver:"David Johnson", status:"Available", location:"Ikeja", trips:18 },
+    { id:"A-102", hospital:"MedCare Hospital", type:"Basic Ambulance", driver:"Samuel Peter", status:"Available", location:"Maryland", trips:11 },
+    { id:"A-103", hospital:"Lagos General Hospital", type:"Mobile ICU", driver:"Michael Ade", status:"Busy", location:"Yaba", trips:27 },
+    { id:"A-104", hospital:"Lagos General Hospital", type:"Maternity", driver:"James Cole", status:"Maintenance", location:"Marina", trips:8 },
+    { id:"A-105", hospital:"City Medical Centre", type:"Basic Ambulance", driver:"Daniel Paul", status:"Available", location:"Surulere", trips:15 }
+  ],
+  emergencies: [],
+  payments: [],
+  notifications: [],
+  settings: { nextEmergency: 1001, nextPayment: 1 }
 };
 
-
-/* =====================================================
-   APPLICATION STATE
-===================================================== */
-
+let state = loadState();
 let currentUser = null;
-
 let currentPage = "dashboard";
-
 let currentEmergency = null;
 
-
-/* =====================================================
-   DEMO DATA
-===================================================== */
-
-const ambulances = [
-
-    {
-        id: "A-101",
-        hospital: "MedCare Hospital",
-        type: "Advanced Life Support",
-        driver: "David Johnson",
-        status: "Available"
-    },
-
-    {
-        id: "A-102",
-        hospital: "MedCare Hospital",
-        type: "Basic Ambulance",
-        driver: "Samuel Peter",
-        status: "Available"
-    },
-
-    {
-        id: "A-103",
-        hospital: "Lagos General Hospital",
-        type: "ICU / Mobile ICU",
-        driver: "Michael Ade",
-        status: "Busy"
-    },
-
-    {
-        id: "A-104",
-        hospital: "Lagos General Hospital",
-        type: "Maternity",
-        driver: "James Cole",
-        status: "Maintenance"
-    },
-
-    {
-        id: "A-105",
-        hospital: "City Medical Centre",
-        type: "Basic Ambulance",
-        driver: "Daniel Paul",
-        status: "Available"
-    }
-
-];
-
-
-const emergencyHistory = [
-
-    {
-        id: "AMB-00091",
-        patient: "John Doe",
-        emergency: "Breathing Difficulty",
-        hospital: "MedCare Hospital",
-        ambulance: "A-101",
-        date: "18 Aug 2026",
-        status: "Completed",
-        amount: 18500
-    },
-
-    {
-        id: "AMB-00082",
-        patient: "Sarah James",
-        emergency: "Road Accident",
-        hospital: "Lagos General Hospital",
-        ambulance: "A-103",
-        date: "17 Aug 2026",
-        status: "Completed",
-        amount: 27000
-    },
-
-    {
-        id: "AMB-00075",
-        patient: "Michael Cole",
-        emergency: "Pregnancy Emergency",
-        hospital: "MedCare Hospital",
-        ambulance: "A-102",
-        date: "15 Aug 2026",
-        status: "Completed",
-        amount: 22000
-    }
-
-];
-
-
-const notifications = [
-
-    {
-        title: "Emergency request completed",
-
-        text: "Your recent ambulance request has been completed.",
-
-        time: "10 minutes ago",
-
-        type: "success"
-
-    },
-
-    {
-        title: "Ambulance available",
-
-        text: "A-102 is currently available near your location.",
-
-        time: "25 minutes ago",
-
-        type: "info"
-
-    },
-
-    {
-        title: "Profile reminder",
-
-        text: "Add an emergency contact to your profile.",
-
-        time: "1 hour ago",
-
-        type: "warning"
-
-    }
-
-];
-
-
-/* =====================================================
-   AUTH
-===================================================== */
-
-function fillDemo(type) {
-
-    const user = demoUsers[type];
-
-    document.getElementById("loginEmail").value =
-        user.email;
-
-    document.getElementById("loginPassword").value =
-        user.password;
-
+function clone(x){ return JSON.parse(JSON.stringify(x)); }
+function loadState(){
+  try { const saved=localStorage.getItem(STORAGE_KEY); return saved ? {...clone(seed), ...JSON.parse(saved)} : clone(seed); }
+  catch(e){ return clone(seed); }
+}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function uid(prefix){ return prefix + Math.random().toString(36).slice(2,8).toUpperCase(); }
+function esc(v=""){ return String(v).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
+function initials(name="User"){ return name.split(/\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase(); }
+function roleLabel(r){ return ({patient:"Patient",hospital:"Hospital",admin:"Administrator"}[r]||r); }
+function money(n){ return "₦" + Number(n||0).toLocaleString("en-NG"); }
+function now(){ return new Date().toLocaleString("en-NG",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}); }
+function today(){ return new Date().toLocaleDateString("en-NG",{day:"2-digit",month:"short",year:"numeric"}); }
+function toast(message,type="success"){
+  const t=document.getElementById("toast"); const m=document.getElementById("toastMessage");
+  m.textContent=message; t.className=`toast show ${type}`;
+  clearTimeout(window.toastTimer); window.toastTimer=setTimeout(()=>t.classList.remove("show"),2800);
 }
 
+/* AUTHENTICATION — demo/local only */
+function fillDemo(type){
+  const u=state.users.find(x=>x.role===type && x.email);
+  document.getElementById("loginEmail").value=u.email;
+  document.getElementById("loginPassword").value=DEMO_PASSWORD;
+  toast(`${roleLabel(type)} demo credentials loaded.`);
+}
+function login(){
+  const email=document.getElementById("loginEmail").value.trim().toLowerCase();
+  const password=document.getElementById("loginPassword").value;
+  if(!email||!password) return toast("Enter your email/phone and password.","error");
+  const user=state.users.find(u=>(u.email.toLowerCase()===email || u.phone===email) && u.password===password);
+  if(!user) return toast("Invalid demo credentials. Try a Demo Account button.","error");
+  if(user.status!=="Active") return toast("This account is currently inactive.","error");
+  currentUser=clone(user); localStorage.setItem("ambuCurrentUser",user.id); startApplication();
+}
+function signup(){
+  const name=document.getElementById("signupName").value.trim();
+  const email=document.getElementById("signupEmail").value.trim().toLowerCase();
+  const phone=document.getElementById("signupPhone").value.trim();
+  const password=document.getElementById("signupPassword").value;
+  const role=document.getElementById("signupRole").value;
+  if(name.length<3||!email.includes("@")||phone.length<7||password.length<6) return toast("Enter valid details. Password must be at least 6 characters.","error");
+  if(state.users.some(u=>u.email.toLowerCase()===email)) return toast("An account with this email already exists.","error");
+  const u={id:uid(role==="hospital"?"HSP-":"USR-"),name,email,phone,password,role,status:"Active",joined:today(),...(role==="hospital"?{address:"Lagos, Nigeria",verified:false}: {})};
+  state.users.push(u); saveState(); currentUser=clone(u); toast("Account created successfully."); setTimeout(startApplication,500);
+}
+function logout(){ currentUser=null; localStorage.removeItem("ambuCurrentUser"); document.getElementById("app").classList.add("hidden"); document.getElementById("authScreen").classList.remove("hidden"); showLogin(); }
+function showSignup(){document.getElementById("loginForm").classList.add("hidden");document.getElementById("signupForm").classList.remove("hidden");}
+function showLogin(){document.getElementById("signupForm").classList.add("hidden");document.getElementById("loginForm").classList.remove("hidden");}
+function togglePassword(id){const i=document.getElementById(id);i.type=i.type==="password"?"text":"password";}
+function resetDemo(){ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem("ambuCurrentUser"); state=clone(seed); currentUser=null; toast("Demo data reset. Refreshing..."); setTimeout(()=>location.reload(),700); }
 
-function login() {
-
-    const email =
-        document.getElementById("loginEmail")
-        .value
-        .trim();
-
-    const password =
-        document.getElementById("loginPassword")
-        .value
-        .trim();
-
-
-    if (!email || !password) {
-
-        showToast(
-            "Please enter your email and password.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    const user = Object.values(demoUsers).find(
-        account =>
-            account.email === email &&
-            account.password === password
-    );
-
-
-    if (!user) {
-
-        showToast(
-            "Invalid demo credentials.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    currentUser = { ...user };
-
-
-    startApplication();
-
+function startApplication(){
+  document.getElementById("authScreen").classList.add("hidden"); document.getElementById("app").classList.remove("hidden");
+  updateUserInfo(); buildNavigation(); showPage("dashboard");
+}
+function updateUserInfo(){ document.getElementById("topUserName").textContent=currentUser.name; document.getElementById("topUserRole").textContent=roleLabel(currentUser.role); document.getElementById("topAvatar").textContent=initials(currentUser.name); updateNotificationBadge(); }
+function updateNotificationBadge(){
+  const count=state.notifications.filter(n=>n.userId===currentUser?.id && !n.read).length;
+  const el=document.getElementById("notificationCount"); el.textContent=count; el.style.display=count?"flex":"none";
+}
+function buildNavigation(){
+  const maps={
+    patient:[["dashboard","fa-house","Dashboard"],["request","fa-truck-medical","Request Ambulance"],["history","fa-clock-rotate-left","My History"],["payments","fa-credit-card","Payments"],["notifications","fa-bell","Notifications"],["profile","fa-user","Profile"]],
+    hospital:[["dashboard","fa-chart-line","Dashboard"],["requests","fa-triangle-exclamation","Emergency Requests"],["ambulances","fa-truck-medical","Ambulances"],["tracking","fa-map-location-dot","Live Tracking"],["history","fa-clock-rotate-left","History"],["payments","fa-credit-card","Payments"],["notifications","fa-bell","Notifications"],["profile","fa-hospital","Hospital Profile"]],
+    admin:[["dashboard","fa-gauge-high","Dashboard"],["emergencies","fa-triangle-exclamation","Emergencies"],["users","fa-users","Users"],["hospitals","fa-hospital","Hospitals"],["ambulances","fa-truck-medical","Ambulances"],["payments","fa-credit-card","Payments"],["notifications","fa-bell","Notifications"],["profile","fa-user-shield","Admin Profile"]]
+  };
+  document.getElementById("sidebarNav").innerHTML=(maps[currentUser.role]||[]).map(x=>`<button class="nav-item" data-page="${x[0]}" onclick="showPage('${x[0]}')"><i class="fa-solid ${x[1]}"></i><span>${x[2]}</span></button>`).join("");
 }
 
-
-function signup() {
-
-    const name =
-        document.getElementById("signupName")
-        .value
-        .trim();
-
-    const email =
-        document.getElementById("signupEmail")
-        .value
-        .trim();
-
-    const phone =
-        document.getElementById("signupPhone")
-        .value
-        .trim();
-
-    const password =
-        document.getElementById("signupPassword")
-        .value;
-
-    const role =
-        document.getElementById("signupRole")
-        .value;
-
-
-    if (!name || !email || !phone || !password) {
-
-        showToast(
-            "Please complete all fields.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    currentUser = {
-
-        name,
-
-        email,
-
-        phone,
-
-        password,
-
-        role
-
-    };
-
-
-    showToast(
-        "Account created successfully."
-    );
-
-
-    setTimeout(() => {
-
-        startApplication();
-
-    }, 700);
-
+const titles={dashboard:["Dashboard","Your AmbuAfrica overview"],request:["Request Ambulance","Get emergency transport when you need it"],history:["My History","Your previous emergency requests"],payments:["Payments","Demo payment and transaction history"],notifications:["Notifications","Updates from your AmbuAfrica activity"],profile:["Profile","Manage your account"],requests:["Emergency Requests","Review and dispatch incoming requests"],ambulances:["Ambulances","Manage your ambulance fleet"],tracking:["Live Tracking","Monitor active ambulance trips"],emergencies:["Emergencies","Platform-wide emergency operations"],users:["Users","Manage registered accounts"],hospitals:["Hospitals","Manage hospitals on the network"]};
+function showPage(page){
+  const allowed={patient:["dashboard","request","history","payments","notifications","profile"],hospital:["dashboard","requests","ambulances","tracking","history","payments","notifications","profile"],admin:["dashboard","emergencies","users","hospitals","ambulances","payments","notifications","profile"]};
+  if(!allowed[currentUser.role]?.includes(page)) page="dashboard";
+  currentPage=page; document.querySelectorAll(".nav-item").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
+  document.getElementById("pageTitle").textContent=titles[page]?.[0]||"Dashboard"; document.getElementById("pageSubtitle").textContent=titles[page]?.[1]||"AmbuAfrica Emergency Network";
+  const c=document.getElementById("pageContent");
+  if(currentUser.role==="patient") renderPatient(page,c); else if(currentUser.role==="hospital") renderHospital(page,c); else renderAdmin(page,c);
+  document.querySelector(".sidebar")?.classList.remove("open"); updateNotificationBadge();
 }
 
+function stat(icon,value,label,sub=""){return `<div class="stat-card"><div class="stat-card-top"><div class="stat-icon"><i class="fa-solid ${icon}"></i></div>${sub?`<span class="stat-trend">${sub}</span>`:""}</div><h3>${esc(value)}</h3><p>${esc(label)}</p></div>`;}
+function header(title,desc,action=""){return `<div class="page-header"><div><h1>${title}</h1><p>${desc}</p></div>${action}</div>`;}
+function badge(s){let c={Completed:"green",Available:"green",Accepted:"blue","En Route":"blue",Pending:"orange",Critical:"red",Rejected:"red",Busy:"orange",Maintenance:"red",Cancelled:"red",Paid:"green",Failed:"red"}[s]||"blue";return `<span class="status ${c}">${esc(s)}</span>`;}
+function empty(title,text){return `<div class="empty-state"><i class="fa-regular fa-folder-open"></i><strong>${title}</strong><span>${text}</span></div>`;}
+function actionButton(text,fn,cls="secondary-btn"){return `<button class="${cls}" onclick="${fn}">${text}</button>`;}
 
-function logout() {
-
-    currentUser = null;
-
-    currentPage = "dashboard";
-
-    document.getElementById("app")
-        .classList.add("hidden");
-
-    document.getElementById("authScreen")
-        .classList.remove("hidden");
-
-    showLogin();
-
+/* PATIENT */
+function renderPatient(page,c){
+  if(page==="dashboard") return patientDashboard(c);
+  if(page==="request") return patientRequest(c);
+  if(page==="history") return patientHistory(c);
+  if(page==="payments") return paymentsPage(c,"patient");
+  if(page==="notifications") return notificationsPage(c);
+  if(page==="profile") return patientProfile(c);
 }
-
-
-/* =====================================================
-   AUTH SCREENS
-===================================================== */
-
-function showSignup() {
-
-    document
-        .getElementById("loginForm")
-        .classList.add("hidden");
-
-    document
-        .getElementById("signupForm")
-        .classList.remove("hidden");
-
+function patientDashboard(c){
+  const active=state.emergencies.find(e=>e.patientId===currentUser.id && !["Completed","Cancelled","Rejected"].includes(e.status));
+  const mine=state.emergencies.filter(e=>e.patientId===currentUser.id);
+  c.innerHTML=`
+    ${header(`Good day, ${esc(currentUser.name.split(" ")[0])} 👋`,`We're here when every second matters.`)}
+    ${active?`<div class="active-banner"><div><span class="pulse-dot"></span><strong>Emergency ${active.id} is ${active.status}</strong><p>${esc(active.emergency)} · ${esc(active.ambulance||"Dispatch in progress")}</p></div><button class="primary-btn small" onclick="showPage('history')">Track Request</button></div>`:""}
+    <div class="emergency-card"><h2>Need an ambulance?</h2><p>Request emergency transport and connect with an available ambulance provider in the demo network.</p><button class="emergency-button" onclick="showPage('request')"><i class="fa-solid fa-truck-medical"></i> Request Ambulance</button></div>
+    <div class="stats-grid">${stat("fa-truck-medical",mine.length,"My Requests")}${stat("fa-check-circle",mine.filter(e=>e.status==="Completed").length,"Completed")}${stat("fa-credit-card",money(state.payments.filter(p=>p.patientId===currentUser.id&&p.status==="Paid").reduce((a,p)=>a+p.amount,0)),"Paid in Demo")}${stat("fa-bell",state.notifications.filter(n=>n.userId===currentUser.id&&!n.read).length,"Unread Updates")}</div>
+    <div class="content-grid two"><div class="card"><div class="card-header"><h3>Quick actions</h3></div><div class="quick-grid"><button class="quick-action" onclick="showPage('request')"><i class="fa-solid fa-truck-medical"></i><strong>Request ambulance</strong><span>Start an emergency request</span></button><button class="quick-action" onclick="showPage('history')"><i class="fa-solid fa-clock-rotate-left"></i><strong>View history</strong><span>Review previous trips</span></button><button class="quick-action" onclick="showPage('payments')"><i class="fa-solid fa-credit-card"></i><strong>Make demo payment</strong><span>Test the payment flow</span></button><button class="quick-action" onclick="showPage('profile')"><i class="fa-solid fa-user"></i><strong>My profile</strong><span>Keep your details ready</span></button></div></div><div class="card"><div class="card-header"><h3>Emergency readiness</h3></div><div class="check-list"><div>✓ Profile information <b>Ready</b></div><div>✓ Emergency request flow <b>Ready</b></div><div>✓ Demo payments <b>Ready</b></div><div>✓ Hospital dispatch simulation <b>Ready</b></div></div></div></div>`;
 }
-
-
-function showLogin() {
-
-    document
-        .getElementById("signupForm")
-        .classList.add("hidden");
-
-    document
-        .getElementById("loginForm")
-        .classList.remove("hidden");
-
+function patientRequest(c){
+  c.innerHTML=`${header("Request an Ambulance","Provide the details dispatch needs. This is a demo request — no real ambulance will be dispatched.")}
+  <div class="form-layout"><div class="card"><div class="form-section-title">1. Emergency details</div><div class="form-grid"><div class="input-group"><label>Emergency type</label><select id="emergencyType"><option>Road Accident</option><option>Breathing Difficulty</option><option>Chest Pain</option><option>Pregnancy Emergency</option><option>Unconsciousness</option><option>Other</option></select></div><div class="input-group"><label>Urgency</label><select id="urgency"><option>Critical</option><option>Urgent</option><option>Standard</option></select></div></div><div class="input-group"><label>Pickup location</label><input id="pickup" placeholder="e.g. Ikeja City Mall, Lagos" value="Ikeja, Lagos"></div><div class="input-group"><label>Additional information</label><textarea id="notes" rows="4" placeholder="Briefly describe what happened..."></textarea></div></div>
+  <div class="card"><div class="form-section-title">2. Transport preference</div><div class="option-cards"><label class="option-card selected"><input type="radio" name="ambType" value="Any Available" checked><span><b>Any available</b><small>Fastest suitable ambulance</small></span></label><label class="option-card"><input type="radio" name="ambType" value="Advanced Life Support"><span><b>Advanced Life Support</b><small>For critical emergencies</small></span></label><label class="option-card"><input type="radio" name="ambType" value="Mobile ICU"><span><b>Mobile ICU</b><small>Advanced critical care support</small></span></label></div><div class="demo-note"><i class="fa-solid fa-shield-halved"></i><span><b>Demo safety notice</b><br>This website is a prototype. It does not contact emergency services.</span></div><button class="primary-btn full" onclick="submitEmergency()">Submit Emergency Request <i class="fa-solid fa-arrow-right"></i></button></div></div>`;
 }
-
-
-function togglePassword(id) {
-
-    const input =
-        document.getElementById(id);
-
-    input.type =
-        input.type === "password"
-            ? "text"
-            : "password";
-
+function submitEmergency(){
+  const type=document.getElementById("emergencyType").value, urgency=document.getElementById("urgency").value, pickup=document.getElementById("pickup").value.trim(), notes=document.getElementById("notes").value.trim(), pref=document.querySelector("input[name=ambType]:checked")?.value||"Any Available";
+  if(!pickup) return toast("Enter a pickup location.","error");
+  const id=`AMB-${String(state.settings.nextEmergency++).padStart(6,"0")}`;
+  const e={id,patientId:currentUser.id,patient:currentUser.name,emergency:type,urgency,pickup,notes,preference:pref,hospital:"",ambulance:"",driver:"",status:"Pending",amount:estimateFare(urgency),createdAt:now(),date:today()};
+  state.emergencies.unshift(e); state.notifications.unshift({id:uid("NTF-"),userId:currentUser.id,title:"Emergency request submitted",text:`${id} has been sent to the demo hospital network.`,time:"Just now",type:"info",read:false}); saveState(); currentEmergency=e;
+  openModal(`<div class="success-icon"><i class="fa-solid fa-check"></i></div><h2>Request submitted</h2><p class="modal-lead">Your demo emergency request <b>${id}</b> is now waiting for a hospital to accept it.</p><div class="request-summary"><div><span>Emergency</span><b>${esc(type)}</b></div><div><span>Pickup</span><b>${esc(pickup)}</b></div><div><span>Estimated fare</span><b>${money(e.amount)}</b></div></div><button class="primary-btn full" onclick="closeModal();showPage('history')">View Request</button>`); updateNotificationBadge();
 }
-
-
-/* =====================================================
-   START APPLICATION
-===================================================== */
-
-function startApplication() {
-
-    document
-        .getElementById("authScreen")
-        .classList.add("hidden");
-
-
-    document
-        .getElementById("app")
-        .classList.remove("hidden");
-
-
-    updateUserInformation();
-
-    buildNavigation();
-
-    showPage("dashboard");
-
+function estimateFare(urgency){return urgency==="Critical"?27000:urgency==="Urgent"?22000:18000;}
+function patientHistory(c){
+  const mine=state.emergencies.filter(e=>e.patientId===currentUser.id); c.innerHTML=`${header("My Emergency History","Track your demo requests and their outcomes.",`<button class="secondary-btn" onclick="showPage('request')"><i class="fa-solid fa-plus"></i> New Request</button>`)}<div class="card"><div class="filter-row"><input id="historySearch" placeholder="Search request or emergency..." oninput="filterTable('historySearch','historyTable')"><select onchange="filterStatus(this.value,'historyTable')"><option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>En Route</option><option>Completed</option><option>Cancelled</option></select></div><div class="table-container"><table id="historyTable"><thead><tr><th>REQUEST</th><th>EMERGENCY</th><th>HOSPITAL</th><th>AMBULANCE</th><th>STATUS</th><th>FARE</th><th></th></tr></thead><tbody>${mine.length?mine.map(e=>`<tr><td><strong>${e.id}</strong><small>${e.createdAt}</small></td><td>${esc(e.emergency)}<small>${esc(e.pickup)}</small></td><td>${esc(e.hospital||"Awaiting dispatch")}</td><td>${esc(e.ambulance||"—")}</td><td>${badge(e.status)}</td><td>${money(e.amount)}</td><td>${e.status!=="Completed"&&e.status!=="Cancelled"?`<button class="table-action" onclick="openTracking('${e.id}')">View</button>`:`<button class="table-action" onclick="viewEmergency('${e.id}')">Details</button>`}</td></tr>`).join(""): `<tr><td colspan="7">${empty("No requests yet","Your ambulance requests will appear here.")}</td></tr>`}</tbody></table></div></div>`;
 }
+function openTracking(id){const e=state.emergencies.find(x=>x.id===id);if(!e)return;openModal(`<h2>Request ${e.id}</h2><p class="modal-lead">Live dispatch simulation</p><div class="timeline"><div class="done"><i class="fa-solid fa-check"></i><span>Request submitted<small>${e.createdAt}</small></span></div><div class="${e.status!=="Pending"?"done":"current"}"><i class="fa-solid fa-hospital"></i><span>Hospital review<small>${e.hospital||"Waiting for acceptance"}</small></span></div><div class="${["En Route","Completed"].includes(e.status)?"done":"current"}"><i class="fa-solid fa-truck-medical"></i><span>Ambulance dispatch<small>${e.ambulance||"Not assigned"}</small></span></div><div class="${e.status==="Completed"?"done":"current"}"><i class="fa-solid fa-flag-checkered"></i><span>Trip completed<small>${e.status==="Completed"?"Completed":"Pending"}</small></span></div></div>${e.status==="Accepted"||e.status==="En Route"?`<button class="primary-btn full" onclick="simulateArrival('${e.id}')">Simulate ${e.status==="Accepted"?"ambulance en route":"arrival"}</button>`:""}`);}
+function simulateArrival(id){const e=state.emergencies.find(x=>x.id===id);if(!e)return;if(e.status==="Accepted")e.status="En Route";else if(e.status==="En Route")e.status="Completed";else return; addNotification(e.patientId,e.status==="Completed"?"Trip completed":"Ambulance en route",`${e.id} status changed to ${e.status}.`,e.status==="Completed"?"success":"info"); if(e.status==="Completed"){const a=state.ambulances.find(a=>a.id===e.ambulance);if(a)a.status="Available";} saveState();closeModal();toast(`Request ${e.id} updated.`);showPage("history");}
+function viewEmergency(id){const e=state.emergencies.find(x=>x.id===id);openModal(`<h2>Request details</h2><div class="detail-list">${Object.entries({Request:e.id,Emergency:e.emergency,Urgency:e.urgency,Location:e.pickup,Hospital:e.hospital||"—",Ambulance:e.ambulance||"—",Status:e.status,Fare:money(e.amount)}).map(([k,v])=>`<div><span>${k}</span><b>${esc(v)}</b></div>`).join("")}</div>`);}
 
-
-function updateUserInformation() {
-
-    const name =
-        currentUser.name || "User";
-
-
-    document
-        .getElementById("topUserName")
-        .textContent = name;
-
-
-    document
-        .getElementById("topUserRole")
-        .textContent =
-            formatRole(currentUser.role);
-
-
-    document
-        .getElementById("topAvatar")
-        .textContent =
-            getInitials(name);
-
+/* SHARED NOTIFICATIONS / PROFILE / PAYMENTS */
+function addNotification(userId,title,text,type="info"){state.notifications.unshift({id:uid("NTF-"),userId,title,text,time:"Just now",type,read:false});}
+function notificationsPage(c){
+  const ns=state.notifications.filter(n=>n.userId===currentUser.id); c.innerHTML=`${header("Notifications","Only activity generated by your demo account appears here.",ns.length?`<button class="secondary-btn" onclick="markAllRead()">Mark all read</button>`:"")}<div class="notification-list">${ns.length?ns.map(n=>`<div class="notification-item ${n.read?"read":"unread"}" onclick="readNotification('${n.id}')"><div class="notification-icon ${n.type}"><i class="fa-solid ${n.type==="success"?"fa-check":n.type==="warning"?"fa-triangle-exclamation":"fa-bell"}"></i></div><div><strong>${esc(n.title)}</strong><p>${esc(n.text)}</p><small>${esc(n.time)}</small></div>${!n.read?'<span class="new-dot"></span>':""}</div>`).join(""):empty("You're all caught up","New request and payment activity will appear here.")}</div>`;
 }
+function readNotification(id){const n=state.notifications.find(x=>x.id===id);if(n)n.read=true;saveState();showPage("notifications");}
+function markAllRead(){state.notifications.filter(n=>n.userId===currentUser.id).forEach(n=>n.read=true);saveState();showPage("notifications");}
+function patientProfile(c){c.innerHTML=`${header("My Profile","Keep your emergency information up to date.")}<div class="content-grid two"><div class="card"><div class="profile-head"><div class="big-avatar">${initials(currentUser.name)}</div><div><h3>${esc(currentUser.name)}</h3><p>AmbuAfrica Patient</p></div></div><div class="form-grid"><div class="input-group"><label>Full name</label><input id="profileName" value="${esc(currentUser.name)}"></div><div class="input-group"><label>Phone</label><input id="profilePhone" value="${esc(currentUser.phone||"")}"></div></div><div class="input-group"><label>Email</label><input value="${esc(currentUser.email)}" disabled></div><button class="primary-btn" onclick="saveProfile()">Save Changes</button></div><div class="card"><div class="card-header"><h3>Emergency contacts</h3><button class="view-btn" onclick="openContactModal()">+ Add</button></div><div id="contactsBox">${currentUser.contacts?.length?currentUser.contacts.map((x,i)=>`<div class="contact-row"><span class="avatar mini">${initials(x.name)}</span><div><b>${esc(x.name)}</b><small>${esc(x.relationship)} · ${esc(x.phone)}</small></div></div>`).join(""):empty("No emergency contact","Add someone we can list as your emergency contact.")}</div></div></div>`;}
+function saveProfile(){const u=state.users.find(x=>x.id===currentUser.id);u.name=document.getElementById("profileName").value.trim()||u.name;u.phone=document.getElementById("profilePhone").value.trim();currentUser=clone(u);saveState();updateUserInfo();toast("Profile updated.");showPage("profile");}
+function openContactModal(){openModal(`<h2>Add emergency contact</h2><div class="input-group"><label>Name</label><input id="cName"></div><div class="input-group"><label>Relationship</label><input id="cRel" placeholder="e.g. Mother"></div><div class="input-group"><label>Phone</label><input id="cPhone"></div><button class="primary-btn full" onclick="addContact()">Save Contact</button>`);}
+function addContact(){const n=document.getElementById("cName").value.trim(),r=document.getElementById("cRel").value.trim(),p=document.getElementById("cPhone").value.trim();if(!n||!p)return toast("Name and phone are required.","error");const u=state.users.find(x=>x.id===currentUser.id);u.contacts=u.contacts||[];u.contacts.push({name:n,relationship:r,phone:p});currentUser=clone(u);saveState();closeModal();toast("Emergency contact added.");showPage("profile");}
 
-
-function formatRole(role) {
-
-    const roles = {
-
-        patient: "Patient",
-
-        hospital: "Hospital",
-
-        admin: "Administrator"
-
-    };
-
-    return roles[role] || role;
-
+function paymentsPage(c,role){
+  const mine=state.payments.filter(p=>role==="patient"?p.patientId===currentUser.id:role==="hospital"?p.hospital===currentUser.name:true); const total=mine.filter(p=>p.status==="Paid").reduce((a,p)=>a+p.amount,0);
+  c.innerHTML=`${header("Payments","Use the demo checkout to test the payment structure. No real payment is processed.",`<button class="primary-btn" onclick="openPaymentModal()"><i class="fa-solid fa-credit-card"></i> Demo Payment</button>`)}<div class="stats-grid">${stat("fa-wallet",money(total),"Paid successfully")}${stat("fa-receipt",mine.length,"Transactions")}${stat("fa-shield-halved","DEMO","Payment mode")}${stat("fa-rotate-left",mine.filter(p=>p.status==="Refunded").length,"Refunds")}</div><div class="card"><div class="card-header"><h3>Transaction history</h3></div><div class="table-container"><table><thead><tr><th>REFERENCE</th><th>DESCRIPTION</th><th>AMOUNT</th><th>METHOD</th><th>DATE</th><th>STATUS</th></tr></thead><tbody>${mine.length?mine.map(p=>`<tr><td><strong>${p.id}</strong></td><td>${esc(p.description)}<small>${esc(p.patient||p.hospital||"")}</small></td><td>${money(p.amount)}</td><td>${esc(p.method)}</td><td>${esc(p.date)}</td><td>${badge(p.status)}</td></tr>`).join(""): `<tr><td colspan="6">${empty("No payments yet","Start a demo payment to see it here.")}</td></tr>`}</tbody></table></div></div>`;
 }
-
-
-function getInitials(name) {
-
-    return name
-
-        .split(" ")
-
-        .map(word => word[0])
-
-        .slice(0, 2)
-
-        .join("")
-        .toUpperCase();
-
+function openPaymentModal(){
+  const active=state.emergencies.find(e=>e.patientId===currentUser.id&&e.status!=="Cancelled"&&e.status!=="Rejected"&&e.amount&&!state.payments.some(p=>p.emergencyId===e.id&&p.status==="Paid"));
+  const option=active ? `<option value="${active.id}">${active.id} — ${money(active.amount)}</option>` : `<option value="">Demo service charge — ₦15,000</option>`;
+  const amount=active?active.amount:15000;
+  openModal(`<h2>Demo Checkout</h2><p class="modal-lead">This checkout is simulated. Do not enter a real card.</p><div class="demo-payment-card"><span>AMBUAFRICA DEMO</span><strong>••••  ••••  ••••  4242</strong><small>TEST CARD · NOT REAL</small></div><div class="form-grid"><div class="input-group"><label>Payment for</label><select id="payEmergency">${option}</select></div><div class="input-group"><label>Amount</label><input id="payAmount" value="${amount}" type="number" min="1000"></div></div><div class="input-group"><label>Test payment method</label><select id="payMethod"><option>Demo Card •••• 4242</option><option>Demo Bank Transfer</option><option>Demo Wallet</option></select></div><button class="primary-btn full" onclick="processDemoPayment()">Pay Securely <i class="fa-solid fa-lock"></i></button><p class="demo-footnote">Demo environment · No money will be deducted.</p>`);
 }
+function processDemoPayment(){const id=document.getElementById("payEmergency").value;const amount=Math.max(1000,Number(document.getElementById("payAmount").value)||0);const method=document.getElementById("payMethod").value;const e=state.emergencies.find(x=>x.id===id);const p={id:`PAY-${String(state.settings.nextPayment++).padStart(5,"0")}`,emergencyId:id||null,patientId:currentUser.role==="patient"?currentUser.id:null,patient:currentUser.role==="patient"?currentUser.name:(e?.patient||"Demo Patient"),hospital:currentUser.role==="hospital"?currentUser.name:(e?.hospital||"MedCare Hospital"),description:e?`Ambulance service · ${e.id}`:"Demo service charge",amount,method,date:today(),status:"Paid"};state.payments.unshift(p);if(e)e.paymentStatus="Paid";if(e)addNotification(e.patientId,"Payment successful",`${p.id} for ${money(amount)} was recorded in demo mode.`);saveState();closeModal();toast(`Demo payment ${p.id} successful.`);showPage("payments");}
 
-
-/* =====================================================
-   NAVIGATION
-===================================================== */
-
-function buildNavigation() {
-
-    const nav =
-        document.getElementById("sidebarNav");
-
-
-    let items = [];
-
-
-    if (currentUser.role === "patient") {
-
-        items = [
-
-            ["dashboard", "fa-house", "Dashboard"],
-
-            ["request", "fa-truck-medical", "Request Ambulance"],
-
-            ["history", "fa-clock-rotate-left", "My History"],
-
-            ["notifications", "fa-bell", "Notifications"],
-
-            ["profile", "fa-user", "Profile"]
-
-        ];
-
-    }
-
-
-    if (currentUser.role === "hospital") {
-
-        items = [
-
-            ["dashboard", "fa-chart-line", "Dashboard"],
-
-            ["requests", "fa-triangle-exclamation", "Emergency Requests"],
-
-            ["ambulances", "fa-truck-medical", "Ambulances"],
-
-            ["tracking", "fa-map-location-dot", "Live Tracking"],
-
-            ["history", "fa-clock-rotate-left", "History"],
-
-            ["notifications", "fa-bell", "Notifications"],
-
-            ["profile", "fa-hospital", "Hospital Profile"]
-
-        ];
-
-    }
-
-
-    if (currentUser.role === "admin") {
-
-        items = [
-
-            ["dashboard", "fa-gauge-high", "Dashboard"],
-
-            ["emergencies", "fa-triangle-exclamation", "Emergencies"],
-
-            ["users", "fa-users", "Users"],
-
-            ["hospitals", "fa-hospital", "Hospitals"],
-
-            ["ambulances", "fa-truck-medical", "Ambulances"],
-
-            ["payments", "fa-credit-card", "Payments"],
-
-            ["notifications", "fa-bell", "Notifications"],
-
-            ["profile", "fa-user-shield", "Admin Profile"]
-
-        ];
-
-    }
-
-
-    nav.innerHTML = items.map(item => `
-
-        <button
-            class="nav-item"
-            data-page="${item[0]}"
-            onclick="showPage('${item[0]}')"
-        >
-
-            <i class="fa-solid ${item[1]}"></i>
-
-            <span>${item[2]}</span>
-
-        </button>
-
-    `).join("");
-
+/* HOSPITAL */
+function hospitalEmergencies(){return state.emergencies.filter(e=>e.hospital===currentUser.name || (!e.hospital && e.status==="Pending"));}
+function renderHospital(page,c){if(page==="dashboard")return hospitalDashboard(c);if(page==="requests")return hospitalRequests(c);if(page==="ambulances")return hospitalAmbulances(c);if(page==="tracking")return hospitalTracking(c);if(page==="history")return hospitalHistory(c);if(page==="payments")return paymentsPage(c,"hospital");if(page==="notifications")return notificationsPage(c);if(page==="profile")return hospitalProfile(c);}
+function hospitalDashboard(c){const req=hospitalEmergencies(), active=req.filter(e=>["Accepted","En Route"].includes(e.status));const fleet=state.ambulances.filter(a=>a.hospital===currentUser.name);c.innerHTML=`${header(esc(currentUser.name),"Hospital command centre — manage requests, fleet and dispatch.",`<button class="primary-btn" onclick="showPage('requests')"><i class="fa-solid fa-triangle-exclamation"></i> Review Requests</button>`)}<div class="stats-grid">${stat("fa-triangle-exclamation",req.filter(e=>e.status==="Pending").length,"Pending requests","Needs attention")}${stat("fa-truck-medical",active.length,"Active dispatches")}${stat("fa-circle-check",req.filter(e=>e.status==="Completed").length,"Completed trips")}${stat("fa-truck-medical",fleet.filter(a=>a.status==="Available").length,"Available ambulances")}</div><div class="content-grid two"><div class="card"><div class="card-header"><h3>Incoming requests</h3><button class="view-btn" onclick="showPage('requests')">View all</button></div>${req.filter(e=>e.status==="Pending").slice(0,4).map(e=>`<div class="request-row"><div><b>${e.id}</b><span>${esc(e.patient)} · ${esc(e.emergency)}</span><small>${esc(e.pickup)} · ${e.createdAt}</small></div><button class="table-action" onclick="openDispatch('${e.id}')">Review</button></div>`).join("")||empty("No pending requests","New demo requests will appear here.")}</div><div class="card"><div class="card-header"><h3>Fleet status</h3><button class="view-btn" onclick="showPage('ambulances')">Manage</button></div>${fleet.map(a=>`<div class="fleet-row"><span class="fleet-icon"><i class="fa-solid fa-truck-medical"></i></span><div><b>${a.id}</b><small>${esc(a.type)} · ${esc(a.driver)}</small></div><span>${badge(a.status)}</span></div>`).join("")||empty("No fleet assigned","Add ambulances from the fleet page.")}</div></div>`;}
+function hospitalRequests(c){const req=hospitalEmergencies();c.innerHTML=`${header("Emergency Requests","Accept, reject and dispatch requests received by your hospital.")}<div class="filter-row card"><input id="reqSearch" placeholder="Search patient, request or emergency..." oninput="filterTable('reqSearch','requestsTable')"><select onchange="filterStatus(this.value,'requestsTable')"><option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>En Route</option><option>Completed</option><option>Rejected</option></select></div><div class="card"><div class="table-container"><table id="requestsTable"><thead><tr><th>REQUEST</th><th>PATIENT</th><th>EMERGENCY</th><th>LOCATION</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>${req.length?req.map(e=>`<tr><td><strong>${e.id}</strong><small>${e.createdAt}</small></td><td>${esc(e.patient)}</td><td>${esc(e.emergency)}<small>${e.urgency}</small></td><td>${esc(e.pickup)}</td><td>${badge(e.status)}</td><td>${e.status==="Pending"?`<button class="table-action" onclick="openDispatch('${e.id}')">Review</button>`:`<button class="table-action" onclick="viewEmergency('${e.id}')">Details</button>`}</td></tr>`).join(""): `<tr><td colspan="6">${empty("No emergency requests","Requests assigned to this hospital will appear here.")}</td></tr>`}</tbody></table></div></div>`;}
+function openDispatch(id){
+  const e=state.emergencies.find(x=>x.id===id); if(!e)return;
+  const fleet=state.ambulances.filter(a=>a.hospital===currentUser.name&&a.status==="Available");
+  let body;
+  if(e.status==="Pending"){
+    const opts=fleet.length?fleet.map(a=>`<option value="${a.id}">${a.id} · ${esc(a.type)} · ${esc(a.driver)}</option>`).join(""):`<option value="">No available ambulance</option>`;
+    body=`<div class="input-group"><label>Assign ambulance</label><select id="dispatchAmb">${opts}</select></div><div class="modal-actions"><button class="danger-btn" onclick="rejectRequest('${e.id}')">Reject</button><button class="primary-btn" onclick="acceptRequest('${e.id}')" ${fleet.length?"":"disabled"}>Accept & Dispatch</button></div>`;
+  } else { body=`<button class="primary-btn full" onclick="closeModal();openTracking('${e.id}')">Open Tracking</button>`; }
+  openModal(`<h2>Review ${e.id}</h2><div class="request-summary"><div><span>Patient</span><b>${esc(e.patient)}</b></div><div><span>Emergency</span><b>${esc(e.emergency)} · ${e.urgency}</b></div><div><span>Pickup</span><b>${esc(e.pickup)}</b></div><div><span>Estimated fare</span><b>${money(e.amount)}</b></div></div>${body}`);
 }
-
-
-/* =====================================================
-   PAGE ROUTER
-===================================================== */
-
-function showPage(page) {
-
-    currentPage = page;
-
-
-    document
-        .querySelectorAll(".nav-item")
-        .forEach(item => {
-
-            item.classList.toggle(
-                "active",
-                item.dataset.page === page
-            );
-
-        });
-
-
-    const titles = {
-
-        dashboard: [
-            "Dashboard",
-            "Your AmbuAfrica overview"
-        ],
-
-        request: [
-            "Request Ambulance",
-            "Get emergency assistance"
-        ],
-
-        history: [
-            "History",
-            "View previous ambulance requests"
-        ],
-
-        notifications: [
-            "Notifications",
-            "Stay updated with your emergency activity"
-        ],
-
-        profile: [
-            "Profile",
-            "Manage your account"
-        ],
-
-        requests: [
-            "Emergency Requests",
-            "Manage incoming emergency calls"
-        ],
-
-        ambulances: [
-            "Ambulances",
-            "Manage your ambulance fleet"
-        ],
-
-        tracking: [
-            "Live Tracking",
-            "Monitor active ambulance missions"
-        ],
-
-        emergencies: [
-            "Emergencies",
-            "Monitor platform emergencies"
-        ],
-
-        users: [
-            "Users",
-            "Manage AmbuAfrica users"
-        ],
-
-        hospitals: [
-            "Hospitals",
-            "Manage healthcare providers"
-        ],
-
-        payments: [
-            "Payments",
-            "Monitor transactions"
-        ]
-
-    };
-
-
-    document
-        .getElementById("pageTitle")
-        .textContent =
-            titles[page]?.[0] || "AmbuAfrica";
-
-
-    document
-        .getElementById("pageSubtitle")
-        .textContent =
-            titles[page]?.[1] || "";
-
-
-    renderPage(page);
-
-}
-
-
-/* =====================================================
-   RENDER PAGE
-===================================================== */
-
-function renderPage(page) {
-
-    const content =
-        document.getElementById("pageContent");
-
-
-    if (
-        currentUser.role === "patient"
-    ) {
-
-        renderPatientPage(
-            page,
-            content
-        );
-
-        return;
-
-    }
-
-
-    if (
-        currentUser.role === "hospital"
-    ) {
-
-        renderHospitalPage(
-            page,
-            content
-        );
-
-        return;
-
-    }
-
-
-    if (
-        currentUser.role === "admin"
-    ) {
-
-        renderAdminPage(
-            page,
-            content
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   PATIENT DASHBOARD
-===================================================== */
-
-function renderPatientPage(page, content) {
-
-    if (page === "dashboard") {
-
-        content.innerHTML = `
-
-            <div class="page-header">
-
-                <h1>
-                    Good morning, ${currentUser.name.split(" ")[0]} 👋
-                </h1>
-
-                <p>
-                    Your emergency support is always within reach.
-                </p>
-
-            </div>
-
-
-            <div class="emergency-card">
-
-                <h2>
-                    Need emergency help?
-                </h2>
-
-                <p>
-                    Request a nearby ambulance and get connected
-                    with an available emergency provider.
-                </p>
-
-
-                <button
-                    class="emergency-button"
-                    onclick="showPage('request')"
-                >
-
-                    <i class="fa-solid fa-truck-medical"></i>
-
-                    REQUEST AMBULANCE
-
-                </button>
-
-            </div>
-
-
-            <div class="location-card">
-
-                <div class="location-icon">
-
-                    <i class="fa-solid fa-location-dot"></i>
-
-                </div>
-
-                <div>
-
-                    <strong>
-                        Current Location
-                    </strong>
-
-                    <span>
-                        Ikeja, Lagos
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <div class="stats-grid">
-
-                <div class="stat-card">
-
-                    <div class="stat-card-top">
-
-                        <span>
-                            Ambulances Nearby
-                        </span>
-
-                        <div class="stat-icon">
-                            <i class="fa-solid fa-truck-medical"></i>
-                        </div>
-
-                    </div>
-
-                    <h3>6</h3>
-
-                    <p>
-                        Available around you
-                    </p>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-card-top">
-
-                        <span>
-                            Requests
-                        </span>
-
-                        <div class="stat-icon">
-                            <i class="fa-solid fa-file-medical"></i>
-                        </div>
-
-                    </div>
-
-                    <h3>3</h3>
-
-                    <p>
-                        Total requests
-                    </p>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-card-top">
-
-                        <span>
-                            Completed
-                        </span>
-
-                        <div class="stat-icon">
-                            <i class="fa-solid fa-circle-check"></i>
-                        </div>
-
-                    </div>
-
-                    <h3>3</h3>
-
-                    <p>
-                        Completed trips
-                    </p>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-card-top">
-
-                        <span>
-                            Emergency Contacts
-                        </span>
-
-                        <div class="stat-icon">
-                            <i class="fa-solid fa-phone"></i>
-                        </div>
-
-                    </div>
-
-                    <h3>2</h3>
-
-                    <p>
-                        Saved contacts
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <div class="card">
-
-                <div class="card-header">
-
-                    <h3>
-                        Quick Actions
-                    </h3>
-
-                </div>
-
-
-                <div class="quick-grid">
-
-                    <button
-                        class="quick-action"
-                        onclick="showPage('request')"
-                    >
-
-                        <i class="fa-solid fa-truck-medical"></i>
-
-                        <strong>
-                            Request Ambulance
-                        </strong>
-
-                        <span>
-                            Get emergency assistance
-                        </span>
-
-                    </button>
-
-
-                    <button
-                        class="quick-action"
-                        onclick="showPage('history')"
-                    >
-
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-
-                        <strong>
-                            Request History
-                        </strong>
-
-                        <span>
-                            View previous trips
-                        </span>
-
-                    </button>
-
-
-                    <button
-                        class="quick-action"
-                        onclick="showPage('profile')"
-                    >
-
-                        <i class="fa-solid fa-user"></i>
-
-                        <strong>
-                            My Profile
-                        </strong>
-
-                        <span>
-                            Manage your information
-                        </span>
-
-                    </button>
-
-                </div>
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    if (page === "request") {
-
-        renderRequestPage(content);
-
-        return;
-
-    }
-
-
-    if (page === "history") {
-
-        renderPatientHistory(content);
-
-        return;
-
-    }
-
-
-    if (page === "notifications") {
-
-        renderNotifications(content);
-
-        return;
-
-    }
-
-
-    if (page === "profile") {
-
-        renderPatientProfile(content);
-
-    }
-
-}
-
-
-/* =====================================================
-   REQUEST PAGE
-===================================================== */
-
-function renderRequestPage(content) {
-
-    content.innerHTML = `
-
-        <div class="page-header">
-
-            <h1>
-                Request an Ambulance
-            </h1>
-
-            <p>
-                Tell us what is happening so we can find
-                the right emergency response.
-            </p>
-
-        </div>
-
-
-        <div class="card">
-
-            <div class="input-group">
-
-                <label>
-                    📍 Current Location
-                </label>
-
-                <input
-                    id="requestLocation"
-                    value="Ikeja, Lagos"
-                    class="form-control"
-                    style="
-                        width:100%;
-                        padding:14px;
-                        border:1px solid var(--border);
-                        border-radius:10px;
-                    "
-                >
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Emergency Type
-                </label>
-
-                <select id="emergencyType">
-
-                    <option value="">
-                        Select emergency
-                    </option>
-
-                    <option>
-                        Road Accident
-                    </option>
-
-                    <option>
-                        Difficulty Breathing
-                    </option>
-
-                    <option>
-                        Severe Bleeding
-                    </option>
-
-                    <option>
-                        Heart-related Emergency
-                    </option>
-
-                    <option>
-                        Pregnancy / Maternity
-                    </option>
-
-                    <option>
-                        Unconsciousness
-                    </option>
-
-                    <option>
-                        Burns
-                    </option>
-
-                    <option>
-                        Other
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Severity
-                </label>
-
-                <select id="severity">
-
-                    <option>
-                        Moderate
-                    </option>
-
-                    <option>
-                        Serious
-                    </option>
-
-                    <option>
-                        Critical
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Number of Patients
-                </label>
-
-                <input
-                    id="patientCount"
-                    type="number"
-                    min="1"
-                    value="1"
-                    style="
-                        width:100%;
-                        padding:14px;
-                        border:1px solid var(--border);
-                        border-radius:10px;
-                    "
-                >
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Ambulance Type
-                </label>
-
-                <select id="ambulanceType">
-
-                    <option>
-                        Basic Ambulance
-                    </option>
-
-                    <option>
-                        Advanced Life Support
-                    </option>
-
-                    <option>
-                        ICU / Mobile ICU
-                    </option>
-
-                    <option>
-                        Maternity
-                    </option>
-
-                    <option>
-                        Neonatal
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Destination Hospital
-                </label>
-
-                <select id="destination">
-
-                    <option>
-                        Select destination
-                    </option>
-
-                    <option>
-                        MedCare Hospital
-                    </option>
-
-                    <option>
-                        Lagos General Hospital
-                    </option>
-
-                    <option>
-                        City Medical Centre
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Additional Information
-                </label>
-
-                <textarea
-                    id="specialRequirements"
-                    placeholder="Tell the ambulance crew anything important..."
-                    style="
-                        width:100%;
-                        min-height:100px;
-                        padding:14px;
-                        border:1px solid var(--border);
-                        border-radius:10px;
-                        resize:vertical;
-                        font-family:inherit;
-                    "
-                ></textarea>
-
-            </div>
-
-
-            <button
-                class="primary-btn"
-                onclick="submitEmergency()"
-            >
-
-                <i class="fa-solid fa-truck-medical"></i>
-
-                REQUEST AMBULANCE
-
-            </button>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   SUBMIT EMERGENCY
-===================================================== */
-
-function submitEmergency() {
-
-    const emergency =
-        document.getElementById("emergencyType")
-        .value;
-
-
-    if (!emergency) {
-
-        showToast(
-            "Please select the emergency type.",
-            "error"
-        );
-
-        return;
-
-    }
-
-
-    currentEmergency = {
-
-        id:
-            "AMB-" +
-            Math.floor(
-                100000 +
-                Math.random() * 900000
-            ),
-
-        patient:
-            currentUser.name,
-
-        emergency,
-
-        severity:
-            document.getElementById("severity")
-                .value,
-
-        location:
-            document.getElementById("requestLocation")
-                .value,
-
-        patients:
-            document.getElementById("patientCount")
-                .value,
-
-        ambulanceType:
-            document.getElementById("ambulanceType")
-                .value,
-
-        destination:
-            document.getElementById("destination")
-                .value,
-
-        status:
-            "Request Received",
-
-        ambulance:
-            null,
-
-        amount:
-            25000
-
-    };
-
-
-    showToast(
-        "Emergency request sent."
-    );
-
-
-    setTimeout(() => {
-
-        showTrackingSimulation();
-
-    }, 700);
-
-}
-
-
-/* =====================================================
-   TRACKING SIMULATION
-===================================================== */
-
-function showTrackingSimulation() {
-
-    const content =
-        document.getElementById("pageContent");
-
-
-    currentPage = "tracking";
-
-
-    content.innerHTML = `
-
-        <div class="page-header">
-
-            <h1>
-                Emergency Tracking
-            </h1>
-
-            <p>
-                Your ambulance request is being processed.
-            </p>
-
-        </div>
-
-
-        <div class="card">
-
-            <div style="
-                height:320px;
-                background:#eaf3ee;
-                border-radius:14px;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                position:relative;
-                overflow:hidden;
-            ">
-
-                <div style="
-                    font-size:50px;
-                ">
-                    🏥
-                </div>
-
-                <div style="
-                    position:absolute;
-                    left:48%;
-                    top:42%;
-                    font-size:35px;
-                ">
-                    🚑
-                </div>
-
-                <div style="
-                    position:absolute;
-                    right:18%;
-                    bottom:25%;
-                    font-size:35px;
-                ">
-                    📍
-                </div>
-
-                <div style="
-                    position:absolute;
-                    left:20%;
-                    top:20%;
-                    width:60%;
-                    height:60%;
-                    border:2px dashed #8ac9a8;
-                    border-radius:50%;
-                "></div>
-
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <div style="
-                display:flex;
-                justify-content:space-between;
-                align-items:center;
-                margin-bottom:20px;
-            ">
-
-                <div>
-
-                    <h3>
-                        🚑 Ambulance A-102
-                    </h3>
-
-                    <p style="
-                        color:var(--muted);
-                        font-size:12px;
-                        margin-top:5px;
-                    ">
-                        MedCare Hospital
-                    </p>
-
-                </div>
-
-                <span class="status blue">
-                    En Route
-                </span>
-
-            </div>
-
-
-            <div class="stats-grid">
-
-                <div class="stat-card">
-
-                    <h3 style="font-size:20px;">
-                        5 min
-                    </h3>
-
-                    <p>
-                        Estimated arrival
-                    </p>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <h3 style="font-size:20px;">
-                        1.8 km
-                    </h3>
-
-                    <p>
-                        Distance
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <button
-                class="primary-btn"
-                onclick="showToast('Calling ambulance A-102...')"
-            >
-
-                <i class="fa-solid fa-phone"></i>
-
-                CALL AMBULANCE
-
-            </button>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   PATIENT HISTORY
-===================================================== */
-
-function renderPatientHistory(content) {
-
-    content.innerHTML = `
-
-        <div class="page-header">
-
-            <h1>
-                My History
-            </h1>
-
-            <p>
-                Your previous ambulance requests.
-            </p>
-
-        </div>
-
-
-        <div class="card">
-
-            <div class="table-container">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-
-                            <th>REQUEST</th>
-                            <th>EMERGENCY</th>
-                            <th>PROVIDER</th>
-                            <th>DATE</th>
-                            <th>AMOUNT</th>
-                            <th>STATUS</th>
-
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody>
-
-                        ${emergencyHistory
-                            .filter(
-                                item =>
-                                    item.patient ===
-                                    currentUser.name ||
-                                    currentUser.role === "admin"
-                            )
-                            .map(item => `
-
-                                <tr>
-
-                                    <td>
-                                        <strong>
-                                            ${item.id}
-                                        </strong>
-                                    </td>
-
-                                    <td>
-                                        ${item.emergency}
-                                    </td>
-
-                                    <td>
-                                        ${item.hospital}
-                                    </td>
-
-                                    <td>
-                                        ${item.date}
-                                    </td>
-
-                                    <td>
-                                        ₦${item.amount.toLocaleString()}
-                                    </td>
-
-                                    <td>
-
-                                        <span class="status green">
-                                            ✓ Completed
-                                        </span>
-
-                                    </td>
-
-                                </tr>
-
-                            `)
-                            .join("")}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   NOTIFICATIONS
-===================================================== */
-
-function renderNotifications(content) {
-
-    content.innerHTML = `
-
-        <div class="page-header">
-
-            <h1>
-                Notifications
-            </h1>
-
-            <p>
-                Important updates from AmbuAfrica.
-            </p>
-
-        </div>
-
-
-        ${notifications.map(notification => `
-
-            <div class="card">
-
-                <div style="
-                    display:flex;
-                    gap:15px;
-                    align-items:flex-start;
-                ">
-
-                    <div class="stat-icon">
-
-                        <i class="fa-solid fa-bell"></i>
-
-                    </div>
-
-                    <div>
-
-                        <strong>
-                            ${notification.title}
-                        </strong>
-
-                        <p style="
-                            color:var(--muted);
-                            margin-top:5px;
-                            font-size:13px;
-                        ">
-                            ${notification.text}
-                        </p>
-
-                        <small style="
-                            color:var(--muted);
-                            display:block;
-                            margin-top:8px;
-                        ">
-                            ${notification.time}
-                        </small>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        `).join("")}
-
-    `;
-
-}
-
-
-/* =====================================================
-   PATIENT PROFILE
-===================================================== */
-
-function renderPatientProfile(content) {
-
-    content.innerHTML = `
-
-        <div class="page-header">
-
-            <h1>
-                My Profile
-            </h1>
-
-            <p>
-                Manage your personal information.
-            </p>
-
-        </div>
-
-
-        <div class="card">
-
-            <div style="
-                display:flex;
-                align-items:center;
-                gap:15px;
-                margin-bottom:25px;
-            ">
-
-                <div
-                    class="avatar"
-                    style="
-                        width:65px;
-                        height:65px;
-                        font-size:18px;
-                    "
-                >
-                    ${getInitials(currentUser.name)}
-                </div>
-
-                <div>
-
-                    <h3>
-                        ${currentUser.name}
-                    </h3>
-
-                    <p style="
-                        color:var(--muted);
-                        font-size:12px;
-                        margin-top:4px;
-                    ">
-                        AmbuAfrica Patient
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Full Name
-                </label>
-
-                <input
-                    value="${currentUser.name}"
-                    style="
-                        width:100%;
-                        padding:14px;
-                        border:1px solid var(--border);
-                        border-radius:10px;
-                    "
-                >
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Email
-                </label>
-
-                <input
-                    value="${currentUser.email}"
-                    style="
-                        width:100%;
-                        padding:14px;
-                        border:1px solid var(--border);
-                        border-radius:10px;
-                    "
-                >
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Phone
-                </label>
-
-                <input
-                    value="${currentUser.phone || '+234 800 000 0000'}"
-                    style="
-                        width:100%;
-                        padding:14px;
-                        border:1px solid var(--border);
-                        border-radius:10px;
-                    "
-                >
-
-            </div>
-
-
-            <button
-                class="primary-btn"
-                onclick="showToast('Profile updated successfully.')"
-            >
-
-                Save Changes
-
-            </button>
-
-        </div>
-
-
-        <div class="card">
-
-            <div class="card-header">
-
-                <h3>
-                    Emergency Contacts
-                </h3>
-
-                <button
-                    class="view-btn"
-                    onclick="showToast('Emergency contact form opened.')"
-                >
-                    + Add Contact
-                </button>
-
-            </div>
-
-
-            <p>
-                <strong>Mother</strong>
-            </p>
-
-            <p style="
-                color:var(--muted);
-                margin-top:5px;
-                font-size:13px;
-            ">
-                +234 800 000 0000
-            </p>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   MODAL
-===================================================== */
-
-function openModal(html) {
-
-    document
-        .getElementById("modalContent")
-        .innerHTML = html;
-
-
-    document
-        .getElementById("modalOverlay")
-        .classList.remove("hidden");
-
-}
-
-
-function closeModal() {
-
-    document
-        .getElementById("modalOverlay")
-        .classList.add("hidden");
-
-}
-
-
-/* =====================================================
-   TOAST
-===================================================== */
-
-function showToast(message, type = "success") {
-
-    const toast =
-        document.getElementById("toast");
-
-
-    const messageElement =
-        document.getElementById("toastMessage");
-
-
-    messageElement.textContent =
-        message;
-
-
-    toast.classList.add("show");
-
-
-    setTimeout(() => {
-
-        toast.classList.remove("show");
-
-    }, 3000);
-
-}
-
-
-/* =====================================================
-   SIDEBAR MOBILE
-===================================================== */
-
-function toggleSidebar() {
-
-    document
-        .querySelector(".sidebar")
-        .classList.toggle("open");
-
-}
-
-
-/* =====================================================
-   HOSPITAL PLACEHOLDER
-===================================================== */
-
-function renderHospitalPage(page, content) {
-
-    content.innerHTML = `
-
-        <div class="page-header">
-
-            <h1>
-                Hospital Dashboard
-            </h1>
-
-            <p>
-                Hospital functionality will be loaded here.
-            </p>
-
-        </div>
-
-        <div class="card">
-
-            <h3>
-                🏥 ${currentUser.name}
-            </h3>
-
-            <p style="
-                color:var(--muted);
-                margin-top:10px;
-            ">
-                Hospital dashboard module ready.
-                The emergency request system,
-                ambulance management and live tracking
-                will be connected in the next module.
-            </p>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   ADMIN PLACEHOLDER
-===================================================== */
-
-function renderAdminPage(page, content) {
-
-    content.innerHTML = `
-
-        <div class="page-header">
-
-            <h1>
-                Admin Dashboard
-            </h1>
-
-            <p>
-                AmbuAfrica platform management.
-            </p>
-
-        </div>
-
-
-        <div class="stats-grid">
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-
-                <h3>2,481</h3>
-
-                <p>
-                    Total Users
-                </p>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    <i class="fa-solid fa-hospital"></i>
-                </div>
-
-                <h3>48</h3>
-
-                <p>
-                    Hospitals
-                </p>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    <i class="fa-solid fa-truck-medical"></i>
-                </div>
-
-                <h3>127</h3>
-
-                <p>
-                    Ambulances
-                </p>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                </div>
-
-                <h3>12</h3>
-
-                <p>
-                    Active Emergencies
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <div class="card-header">
-
-                <h3>
-                    Recent Emergencies
-                </h3>
-
-            </div>
-
-
-            <div class="table-container">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-
-                            <th>REQUEST</th>
-                            <th>PATIENT</th>
-                            <th>EMERGENCY</th>
-                            <th>AMBULANCE</th>
-                            <th>STATUS</th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        <tr>
-
-                            <td>
-                                <strong>AMB-001024</strong>
-                            </td>
-
-                            <td>
-                                John Doe
-                            </td>
-
-                            <td>
-                                Road Accident
-                            </td>
-
-                            <td>
-                                A-102
-                            </td>
-
-                            <td>
-
-                                <span class="status blue">
-                                    En Route
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr>
-
-                            <td>
-                                <strong>AMB-001023</strong>
-                            </td>
-
-                            <td>
-                                Sarah James
-                            </td>
-
-                            <td>
-                                Breathing Difficulty
-                            </td>
-
-                            <td>
-                                A-044
-                            </td>
-
-                            <td>
-
-                                <span class="status red">
-                                    Critical
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    `;
-
-}
+function acceptRequest(id){const e=state.emergencies.find(x=>x.id===id),amb=state.ambulances.find(a=>a.id===document.getElementById("dispatchAmb")?.value);if(!e||!amb)return toast("Select an available ambulance.","error");e.hospital=currentUser.name;e.ambulance=amb.id;e.driver=amb.driver;e.status="Accepted";amb.status="Busy";addNotification(e.patientId,"Hospital accepted your request",`${currentUser.name} assigned ${amb.id} to ${e.id}.`,"success");saveState();closeModal();toast(`${e.id} accepted and ${amb.id} dispatched.`);showPage("requests");}
+function rejectRequest(id){const e=state.emergencies.find(x=>x.id===id);if(!e)return;e.hospital=currentUser.name;e.status="Rejected";addNotification(e.patientId,"Request declined",`${currentUser.name} could not accept ${e.id}.`,"warning");saveState();closeModal();toast("Request rejected.","error");showPage("requests");}
+function hospitalAmbulances(c){const fleet=state.ambulances.filter(a=>a.hospital===currentUser.name);c.innerHTML=`${header("Ambulance Fleet","Monitor availability, drivers and vehicle types.",`<button class="primary-btn" onclick="openAmbulanceModal()"><i class="fa-solid fa-plus"></i> Add Ambulance</button>`)}<div class="stats-grid">${stat("fa-truck-medical",fleet.length,"Total fleet")}${stat("fa-circle-check",fleet.filter(a=>a.status==="Available").length,"Available")}${stat("fa-road",fleet.reduce((a,x)=>a+x.trips,0),"Trips completed")}${stat("fa-wrench",fleet.filter(a=>a.status==="Maintenance").length,"Maintenance")}</div><div class="fleet-grid">${fleet.map(a=>`<div class="fleet-card"><div class="fleet-card-head"><span class="fleet-icon"><i class="fa-solid fa-truck-medical"></i></span>${badge(a.status)}</div><h3>${a.id}</h3><p>${esc(a.type)}</p><div class="fleet-meta"><span><i class="fa-solid fa-user"></i>${esc(a.driver)}</span><span><i class="fa-solid fa-location-dot"></i>${esc(a.location)}</span><span><i class="fa-solid fa-road"></i>${a.trips} trips</span></div><button class="secondary-btn full" onclick="cycleAmbulance('${a.id}')">Change status</button></div>`).join("")||empty("No ambulances","Add your first demo ambulance.")}</div>`;}
+function openAmbulanceModal(){openModal(`<h2>Add demo ambulance</h2><div class="input-group"><label>Vehicle ID</label><input id="aId" placeholder="A-106"></div><div class="input-group"><label>Type</label><select id="aType"><option>Basic Ambulance</option><option>Advanced Life Support</option><option>Mobile ICU</option><option>Maternity</option></select></div><div class="input-group"><label>Driver</label><input id="aDriver"></div><div class="input-group"><label>Base location</label><input id="aLocation" value="Lagos"></div><button class="primary-btn full" onclick="addAmbulance()">Add to Fleet</button>`);}
+function addAmbulance(){const id=document.getElementById("aId").value.trim(),driver=document.getElementById("aDriver").value.trim();if(!id||!driver)return toast("Vehicle ID and driver are required.","error");if(state.ambulances.some(a=>a.id===id))return toast("That ambulance ID already exists.","error");state.ambulances.push({id,hospital:currentUser.name,type:document.getElementById("aType").value,driver,status:"Available",location:document.getElementById("aLocation").value||"Lagos",trips:0});saveState();closeModal();toast(`${id} added to fleet.`);showPage("ambulances");}
+function cycleAmbulance(id){const a=state.ambulances.find(x=>x.id===id);if(!a)return;const seq=["Available","Busy","Maintenance"];a.status=seq[(seq.indexOf(a.status)+1)%seq.length];saveState();toast(`${id} is now ${a.status}.`);showPage("ambulances");}
+function hospitalTracking(c){const active=state.emergencies.filter(e=>e.hospital===currentUser.name&&["Accepted","En Route"].includes(e.status));c.innerHTML=`${header("Live Tracking","Simulated dispatch tracking for active trips.")}<div class="tracking-grid">${active.map(e=>`<div class="card tracking-card"><div class="tracking-top"><div><b>${e.id}</b><p>${esc(e.patient)} · ${esc(e.emergency)}</p></div>${badge(e.status)}</div><div class="route"><div class="route-point"><i class="fa-solid fa-location-dot"></i><span>Pickup<small>${esc(e.pickup)}</small></span></div><div class="route-line"><span></span></div><div class="route-point"><i class="fa-solid fa-hospital"></i><span>Hospital<small>${esc(currentUser.name)}</small></span></div></div><div class="tracking-meta"><span><b>${e.ambulance}</b><small>Vehicle</small></span><span><b>${e.driver}</b><small>Driver</small></span><span><b>DEMO</b><small>GPS</small></span></div><button class="primary-btn full" onclick="advanceHospitalTrip('${e.id}')">${e.status==="Accepted"?"Start trip":"Complete trip"}</button></div>`).join("")||empty("No active trips","Accepted and en-route requests will appear here.")}</div>`;}
+function advanceHospitalTrip(id){const e=state.emergencies.find(x=>x.id===id);if(!e)return;if(e.status==="Accepted")e.status="En Route";else if(e.status==="En Route"){e.status="Completed";const a=state.ambulances.find(x=>x.id===e.ambulance);if(a){a.status="Available";a.trips++;}}addNotification(e.patientId,e.status==="Completed"?"Ambulance trip completed":"Ambulance is en route",`${e.id} is now ${e.status}.`,e.status==="Completed"?"success":"info");saveState();toast(`${e.id} updated to ${e.status}.`);showPage("tracking");}
+function hospitalHistory(c){const list=state.emergencies.filter(e=>e.hospital===currentUser.name&&e.status==="Completed");c.innerHTML=`${header("Trip History","Completed ambulance journeys handled by your hospital.")}<div class="card"><div class="table-container"><table><thead><tr><th>REQUEST</th><th>PATIENT</th><th>EMERGENCY</th><th>AMBULANCE</th><th>FARE</th><th>STATUS</th></tr></thead><tbody>${list.map(e=>`<tr><td>${e.id}<small>${e.date}</small></td><td>${esc(e.patient)}</td><td>${esc(e.emergency)}</td><td>${e.ambulance}</td><td>${money(e.amount)}</td><td>${badge(e.status)}</td></tr>`).join("")||`<tr><td colspan="6">${empty("No completed trips","Completed hospital trips will be recorded here.")}</td></tr>`}</tbody></table></div></div>`;}
+function hospitalProfile(c){c.innerHTML=`${header("Hospital Profile","Manage the information patients and administrators see.")}<div class="card"><div class="profile-head"><div class="hospital-logo"><i class="fa-solid fa-hospital"></i></div><div><h3>${esc(currentUser.name)}</h3><p>${currentUser.verified?"Verified provider":"Verification pending"}</p></div></div><div class="form-grid"><div class="input-group"><label>Hospital name</label><input id="hospitalName" value="${esc(currentUser.name)}"></div><div class="input-group"><label>Phone</label><input id="hospitalPhone" value="${esc(currentUser.phone||"")}"></div></div><div class="input-group"><label>Address</label><input id="hospitalAddress" value="${esc(currentUser.address||"")}"></div><button class="primary-btn" onclick="saveHospitalProfile()">Save Hospital Profile</button></div>`;}
+function saveHospitalProfile(){const u=state.users.find(x=>x.id===currentUser.id);u.name=document.getElementById("hospitalName").value.trim()||u.name;u.phone=document.getElementById("hospitalPhone").value.trim();u.address=document.getElementById("hospitalAddress").value.trim();state.ambulances.forEach(a=>{if(a.hospital===currentUser.name)a.hospital=u.name;});state.emergencies.forEach(e=>{if(e.hospital===currentUser.name)e.hospital=u.name;});currentUser=clone(u);saveState();updateUserInfo();buildNavigation();toast("Hospital profile updated.");showPage("profile");}
+
+/* ADMIN */
+function renderAdmin(page,c){if(page==="dashboard")return adminDashboard(c);if(page==="emergencies")return adminEmergencies(c);if(page==="users")return adminUsers(c);if(page==="hospitals")return adminHospitals(c);if(page==="ambulances")return adminAmbulances(c);if(page==="payments")return paymentsPage(c,"admin");if(page==="notifications")return notificationsPage(c);if(page==="profile")return adminProfile(c);}
+function adminDashboard(c){const active=state.emergencies.filter(e=>["Pending","Accepted","En Route"].includes(e.status));const revenue=state.payments.filter(p=>p.status==="Paid").reduce((a,p)=>a+p.amount,0);c.innerHTML=`${header("Platform Overview","AmbuAfrica administration and operations at a glance.",`<button class="secondary-btn" onclick="resetDemo()"><i class="fa-solid fa-rotate"></i> Reset Demo Data</button>`)}<div class="stats-grid">${stat("fa-users",state.users.length,"Registered users")}${stat("fa-hospital",state.users.filter(u=>u.role==="hospital").length,"Hospitals")}${stat("fa-truck-medical",state.ambulances.length,"Ambulances")}${stat("fa-triangle-exclamation",active.length,"Active emergencies","Live demo")}</div><div class="stats-grid">${stat("fa-credit-card",money(revenue),"Demo revenue")}${stat("fa-check-circle",state.emergencies.filter(e=>e.status==="Completed").length,"Completed trips")}${stat("fa-clock",state.emergencies.filter(e=>e.status==="Pending").length,"Pending requests")}${stat("fa-user-check",state.users.filter(u=>u.status==="Active").length,"Active accounts")}</div><div class="content-grid two"><div class="card"><div class="card-header"><h3>Recent emergency activity</h3><button class="view-btn" onclick="showPage('emergencies')">Manage</button></div>${state.emergencies.slice(0,6).map(e=>`<div class="request-row"><div><b>${e.id}</b><span>${esc(e.patient)} · ${esc(e.emergency)}</span><small>${esc(e.hospital||"Unassigned")} · ${e.createdAt}</small></div>${badge(e.status)}</div>`).join("")||empty("No emergency activity","Create a patient demo request to populate the platform.")}</div><div class="card"><div class="card-header"><h3>System health</h3></div><div class="health-row"><span><i class="fa-solid fa-circle-check"></i> Authentication</span><b>Operational</b></div><div class="health-row"><span><i class="fa-solid fa-circle-check"></i> Dispatch engine</span><b>Operational</b></div><div class="health-row"><span><i class="fa-solid fa-circle-check"></i> Demo payments</span><b>Operational</b></div><div class="health-row"><span><i class="fa-solid fa-circle-check"></i> Notifications</span><b>Operational</b></div></div></div>`;}
+function adminEmergencies(c){c.innerHTML=`${header("Emergency Operations","Monitor every request across the network.")}<div class="filter-row card"><input id="adminReqSearch" placeholder="Search request, patient or hospital..." oninput="filterTable('adminReqSearch','adminEmergencyTable')"><select onchange="filterStatus(this.value,'adminEmergencyTable')"><option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>En Route</option><option>Completed</option><option>Rejected</option></select></div><div class="card"><div class="table-container"><table id="adminEmergencyTable"><thead><tr><th>REQUEST</th><th>PATIENT</th><th>HOSPITAL</th><th>AMBULANCE</th><th>STATUS</th><th>FARE</th><th></th></tr></thead><tbody>${state.emergencies.map(e=>`<tr><td><strong>${e.id}</strong><small>${e.date}</small></td><td>${esc(e.patient)}</td><td>${esc(e.hospital||"Unassigned")}</td><td>${e.ambulance||"—"}</td><td>${badge(e.status)}</td><td>${money(e.amount)}</td><td><button class="table-action" onclick="viewEmergency('${e.id}')">Details</button></td></tr>`).join("")||`<tr><td colspan="7">${empty("No emergencies","Patient demo requests will appear here.")}</td></tr>`}</tbody></table></div></div>`;}
+function adminUsers(c){c.innerHTML=`${header("User Management","View and manage patient and staff accounts.")}<div class="card"><div class="filter-row"><input id="userSearch" placeholder="Search by name or email..." oninput="filterTable('userSearch','usersTable')"><select onchange="filterRole(this.value,'usersTable')"><option value="">All roles</option><option>Patient</option><option>Hospital</option><option>Administrator</option></select></div><div class="table-container"><table id="usersTable"><thead><tr><th>USER</th><th>CONTACT</th><th>ROLE</th><th>JOINED</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>${state.users.map(u=>`<tr><td><div class="user-cell"><span class="avatar mini">${initials(u.name)}</span><span><strong>${esc(u.name)}</strong><small>${esc(u.id)}</small></span></div></td><td>${esc(u.email)}<small>${esc(u.phone||"")}</small></td><td>${roleLabel(u.role)}</td><td>${u.joined}</td><td>${badge(u.status)}</td><td><button class="table-action" onclick="toggleUser('${u.id}')">${u.status==="Active"?"Deactivate":"Activate"}</button></td></tr>`).join("")}</tbody></table></div></div>`;}
+function toggleUser(id){const u=state.users.find(x=>x.id===id);if(!u||u.id===currentUser.id)return toast("You cannot deactivate your current admin account.","error");u.status=u.status==="Active"?"Inactive":"Active";saveState();toast(`${u.name} is now ${u.status}.`);showPage("users");}
+function adminHospitals(c){const hs=state.users.filter(u=>u.role==="hospital");c.innerHTML=`${header("Hospital Network","Review providers and their fleet capacity.")}<div class="hospital-grid">${hs.map(h=>{const fleet=state.ambulances.filter(a=>a.hospital===h.name);return `<div class="hospital-card"><div class="hospital-card-head"><div class="hospital-logo"><i class="fa-solid fa-hospital"></i></div><div><h3>${esc(h.name)}</h3><p>${h.verified?"Verified provider":"Verification pending"}</p></div>${h.verified?'<span class="verified"><i class="fa-solid fa-check"></i></span>':""}</div><div class="hospital-meta"><span><b>${fleet.length}</b><small>Ambulances</small></span><span><b>${fleet.filter(a=>a.status==="Available").length}</b><small>Available</small></span><span><b>${state.emergencies.filter(e=>e.hospital===h.name).length}</b><small>Requests</small></span></div><button class="secondary-btn full" onclick="toggleVerification('${h.id}')">${h.verified?"Remove verification":"Verify hospital"}</button></div>`}).join("")}</div>`;}
+function toggleVerification(id){const u=state.users.find(x=>x.id===id);u.verified=!u.verified;saveState();toast(`${u.name} ${u.verified?"verified":"unverified"}.`);showPage("hospitals");}
+function adminAmbulances(c){c.innerHTML=`${header("Ambulance Network","Monitor vehicles across all hospitals.")}<div class="card"><div class="table-container"><table><thead><tr><th>VEHICLE</th><th>HOSPITAL</th><th>TYPE</th><th>DRIVER</th><th>LOCATION</th><th>STATUS</th></tr></thead><tbody>${state.ambulances.map(a=>`<tr><td><strong>${a.id}</strong></td><td>${esc(a.hospital)}</td><td>${esc(a.type)}</td><td>${esc(a.driver)}</td><td>${esc(a.location)}</td><td>${badge(a.status)}</td></tr>`).join("")}</tbody></table></div></div>`;}
+function adminProfile(c){c.innerHTML=`${header("Admin Profile","Demo administrator controls.")}<div class="card"><div class="profile-head"><div class="big-avatar"><i class="fa-solid fa-user-shield"></i></div><div><h3>${esc(currentUser.name)}</h3><p>Platform Administrator</p></div></div><div class="form-grid"><div class="input-group"><label>Name</label><input value="${esc(currentUser.name)}" disabled></div><div class="input-group"><label>Email</label><input value="${esc(currentUser.email)}" disabled></div></div><div class="demo-note"><i class="fa-solid fa-code"></i><span><b>Demo environment</b><br>Accounts, dispatch, notifications and payments use browser storage. No real backend service is connected.</span></div><button class="danger-btn" onclick="resetDemo()">Reset all demo data</button></div>`;}
+
+/* UTILITIES */
+function filterTable(inputId,tableId){const q=document.getElementById(inputId).value.toLowerCase();document.querySelectorAll(`#${tableId} tbody tr`).forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?"":"none");}
+function filterStatus(v,tableId){document.querySelectorAll(`#${tableId} tbody tr`).forEach(r=>r.style.display=!v||r.innerText.includes(v)?"":"none");}
+function filterRole(v,tableId){document.querySelectorAll(`#${tableId} tbody tr`).forEach(r=>r.style.display=!v||r.innerText.includes(v)?"":"none");}
+function openModal(html){document.getElementById("modalContent").innerHTML=html;document.getElementById("modalOverlay").classList.remove("hidden");}
+function closeModal(){document.getElementById("modalOverlay").classList.add("hidden");}
+function toggleSidebar(){document.querySelector(".sidebar").classList.toggle("open");}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+document.getElementById("modalOverlay")?.addEventListener("click",e=>{if(e.target.id==="modalOverlay")closeModal();});
+
+/* Restore only a valid local demo session. */
+(function restore(){
+  const id=localStorage.getItem("ambuCurrentUser");
+  if(id){const u=state.users.find(x=>x.id===id&&x.status==="Active");if(u){currentUser=clone(u);startApplication();return;}}
+  document.getElementById("notificationCount").style.display="none";
+})();
