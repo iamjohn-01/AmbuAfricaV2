@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AmbuAfrica — Emergency Response</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body>
+
+<!-- =====================================================
+     AUTHENTICATION
+===================================================== -->
+
+<div id="authScreen" class="auth-screen">
+
+    <div class="auth-card">
+
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-truck-medical"></i>
+            </div>
+
+            <div>
+                <h1>Ambu<span>Africa</span></h1>
+                <p>Your emergency, our priority.</p>
+            </div>
+        </div>
+
+
+        <!-- LOGIN -->
+
+        <div id="loginForm">
+
+            <h2>Welcome back</h2>
+
+            <p class="form-subtitle">
+                Sign in to access your AmbuAfrica dashboard.
+            </p>
+
+            <div class="input-group">
+                <label>Email or Phone</label>
+
+                <div class="input-wrapper">
+                    <i class="fa-regular fa-user"></i>
+
+                    <input
+                        type="text"
+                        id="loginEmail"
+                        placeholder="Enter email or phone"
+                    >
+                </div>
+            </div>
+
+
+            <div class="input-group">
+
+                <label>Password</label>
+
+                <div class="input-wrapper">
+
+                    <i class="fa-solid fa-lock"></i>
+
+                    <input
+                        type="password"
+                        id="loginPassword"
+                        placeholder="Enter password"
+                    >
+
+                    <button
+                        class="password-toggle"
+                        onclick="togglePassword('loginPassword')"
+                    >
+                        <i class="fa-regular fa-eye"></i>
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="demo-login">
+
+                <p>Demo accounts</p>
+
+                <div class="demo-buttons">
+
+                    <button onclick="fillDemo('patient')">
+                        Patient
+                    </button>
+
+                    <button onclick="fillDemo('hospital')">
+                        Hospital
+                    </button>
+
+                    <button onclick="fillDemo('admin')">
+                        Admin
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <button class="primary-btn" onclick="login()">
+
+                <span>Sign In</span>
+
+                <i class="fa-solid fa-arrow-right"></i>
+
+            </button>
+
+
+            <p class="switch-auth">
+
+                Don't have an account?
+
+                <button onclick="showSignup()">
+                    Create one
+                </button>
+
+            </p>
+
+        </div>
+
+
+        <!-- SIGN UP -->
+
+        <div id="signupForm" class="hidden">
+
+            <button class="back-btn" onclick="showLogin()">
+                <i class="fa-solid fa-arrow-left"></i>
+                Back
+            </button>
+
+            <h2>Create account</h2>
+
+            <p class="form-subtitle">
+                Join the AmbuAfrica emergency network.
+            </p>
+
+
+            <div class="input-group">
+
+                <label>Full Name</label>
+
+                <div class="input-wrapper">
+
+                    <i class="fa-regular fa-user"></i>
+
+                    <input
+                        type="text"
+                        id="signupName"
+                        placeholder="John Doe"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>Email</label>
+
+                <div class="input-wrapper">
+
+                    <i class="fa-regular fa-envelope"></i>
+
+                    <input
+                        type="email"
+                        id="signupEmail"
+                        placeholder="john@email.com"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>Phone Number</label>
+
+                <div class="input-wrapper">
+
+                    <i class="fa-solid fa-phone"></i>
+
+                    <input
+                        type="tel"
+                        id="signupPhone"
+                        placeholder="+234 800 000 0000"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>Password</label>
+
+                <div class="input-wrapper">
+
+                    <i class="fa-solid fa-lock"></i>
+
+                    <input
+                        type="password"
+                        id="signupPassword"
+                        placeholder="Create a password"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>Account Type</label>
+
+                <select id="signupRole">
+
+                    <option value="patient">
+                        Patient / User
+                    </option>
+
+                    <option value="hospital">
+                        Hospital / Ambulance Provider
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <button
+                class="primary-btn"
+                onclick="signup()"
+            >
+
+                Create Account
+
+                <i class="fa-solid fa-user-plus"></i>
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     MAIN APPLICATION
+===================================================== -->
+
+<div id="app" class="app hidden">
+
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar">
+
+        <div class="sidebar-brand">
+
+            <div class="brand-icon small">
+                <i class="fa-solid fa-truck-medical"></i>
+            </div>
+
+            <div>
+
+                <h2>
+                    Ambu<span>Africa</span>
+                </h2>
+
+                <small>
+                    Emergency Network
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <nav id="sidebarNav">
+            <!-- Generated by JavaScript -->
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <button onclick="logout()" class="logout-btn">
+
+                <i class="fa-solid fa-right-from-bracket"></i>
+
+                Logout
+
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="main-content">
+
+
+        <!-- TOP BAR -->
+
+        <header class="topbar">
+
+            <button
+                class="mobile-menu"
+                onclick="toggleSidebar()"
+            >
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+
+            <div class="page-title">
+
+                <h2 id="pageTitle">
+                    Dashboard
+                </h2>
+
+                <p id="pageSubtitle">
+                    Welcome to AmbuAfrica
+                </p>
+
+            </div>
+
+
+            <div class="top-actions">
+
+                <button
+                    class="icon-btn notification-button"
+                    onclick="showPage('notifications')"
+                >
+
+                    <i class="fa-regular fa-bell"></i>
+
+                    <span id="notificationCount">
+                        3
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="user-mini"
+                    onclick="showPage('profile')"
+                >
+
+                    <div class="avatar" id="topAvatar">
+                        JD
+                    </div>
+
+                    <div>
+
+                        <strong id="topUserName">
+                            John Doe
+                        </strong>
+
+                        <small id="topUserRole">
+                            Patient
+                        </small>
+
+                    </div>
+
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <!-- PAGE CONTENT -->
+
+        <section id="pageContent">
+
+            <!-- JavaScript will render pages here -->
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL
+===================================================== -->
+
+<div id="modalOverlay" class="modal-overlay hidden">
+
+    <div class="modal">
+
+        <button
+            class="modal-close"
+            onclick="closeModal()"
+        >
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div id="modalContent"></div>
+
+    </div>
+
+</div>
+
+
+<!-- TOAST -->
+
+<div id="toast" class="toast">
+
+    <i class="fa-solid fa-circle-check"></i>
+
+    <span id="toastMessage">
+        Success
+    </span>
+
+</div>
+
+
+<script src="app.js"></script>
+
+</body>
+</html>
