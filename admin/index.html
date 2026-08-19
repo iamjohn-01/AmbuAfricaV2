@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AmbuAfrica Admin</title>
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-card">
+    <div class="brand">
+      <div class="brand-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <div><h1>Ambu<span>Africa</span></h1><p>Private Operations Console</p></div>
+    </div>
+    <h2>Administrator sign in</h2>
+    <p class="form-subtitle">This console is intentionally separate from the public patient, driver and hospital application.</p>
+    <div class="input-group"><label>Admin email</label><input id="adminEmail" type="email" placeholder="admin@ambuafrica.com"></div>
+    <div class="input-group"><label>Password</label><input id="adminPassword" type="password" placeholder="••••••••"></div>
+    <button class="primary-btn" onclick="adminLogin()">Sign in securely <i class="fa-solid fa-arrow-right"></i></button>
+    <p id="adminMessage" class="admin-message"></p>
+  </div>
+</div>
+<script src="../config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
